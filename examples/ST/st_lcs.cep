@@ -1,0 +1,61 @@
+actor : type.
+
+manufacturer_is actor : pred.
+
+entity actor : pred.
+
+ic : type.
+chip ic : pred.
+
+%% Chip life cycle states
+chip_is_raw ic : pred.
+chip_is_made ic : pred.
+chip_is_configured ic : pred.
+chip_life_is_over ic : pred.
+
+isOwning actor ic : pred.
+
+
+stage LCM = {
+
+lifeCycle/create_IC
+  : $entity X * $manufacturer_is X * chip Y * chip_is_raw Y -o chip Y * chip_is_made Y * isOwning X Y.
+  
+lifeCycle/give_ownership
+  : $chip Y * isOwning X Y * $entity X * $entity X' -o isOwning X' Y.
+  
+lifeCycle/chip_configure
+  : $entity X * $chip Y * $isOwning X Y * chip_is_made Y -o chip_is_configured Y.
+  
+lifeCycle/chip_reconfigure
+  : $entity X * $chip Y * $isOwning X Y * chip_is_configured Y -o chip_is_configured Y.
+  
+lifeCycle/chip_end_of_life
+  : chip Y * chip_is_configured Y -o !chip_life_is_over Y.
+
+}
+#interactive LCM.
+
+stmicro : actor.
+clientA : actor.
+clientB : actor.
+component1 : ic.
+component2: ic.
+
+
+context init =
+{
+  entity stmicro, 
+  manufacturer_is stmicro, 
+  entity clientA,
+  entity clientB,
+ 
+  chip component1, 
+  chip_is_raw component1, 
+  chip component2,
+  chip_is_raw component2
+}
+
+
+#trace _ LCM init.
+
