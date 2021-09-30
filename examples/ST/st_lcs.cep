@@ -6,18 +6,18 @@ s nat : nat.
 #builtin NAT nat.
 #builtin NAT_ZERO z.
 #builtin NAT_SUCC s.
-%Nat defintion END%
+
 
 %User definition%
 actor : type.
 
-manufacturer_is actor : pred.
+manufacturer_is actor : bwd.
 
 entity actor : pred.
 
 
 ic : type.
-stm32f4 : ic.
+stm32f4 nat : ic.
 
 ic_produced nat : pred.
 
@@ -25,48 +25,49 @@ inc_ic nat nat: bwd.
 inc_ic N (s N).
 
 
-chip ic nat: pred.
+chip ic: pred.
 
 
 %% Chip life cycle states
-chip_is_unconfigured ic nat : pred.
-chip_is_configured ic nat : pred.
-chip_life_is_over ic nat : pred.
+chip_is_unconfigured ic: pred.
+chip_is_configured ic: pred.
+chip_life_is_over ic: pred.
 
-own actor ic nat : pred.
-%User definition END%
+
+own actor ic: pred.
+
 
 %Stage section%
 stage LCM = {
 
 lifeCycle/create_IC
-  : $entity X * $manufacturer_is X * ic_produced N * inc_ic N P -o chip stm32f4 P * chip_is_unconfigured stm32f4 P * own X stm32f4 P * ic_produced P.
+  : $entity X * manufacturer_is X * ic_produced N * inc_ic N P -o chip (stm32f4 P) * chip_is_unconfigured (stm32f4 P) * own X (stm32f4 P) * ic_produced P.
   
 lifeCycle/give_ownership
-  : $chip Y N * own X Y N * $entity X * $entity X' -o own X' Y N.
+  : $chip Y * own X Y * $entity X * $entity X' -o own X' Y.
   
 lifeCycle/chip_configure
-  : $entity X * $chip Y N * $own X Y N * chip_is_unconfigured Y N -o chip_is_configured Y N.
+  : $entity X * $chip Y * $own X Y * chip_is_unconfigured Y -o chip_is_configured Y.
   
 lifeCycle/chip_reconfigure
-  : $entity X * $chip Y N * $own X Y N * chip_is_configured Y N -o chip_is_configured Y N.
+  : $entity X * $chip Y * $own X Y * chip_is_configured Y -o chip_is_configured Y.
   
 lifeCycle/chip_end_of_life
-  : chip Y N * chip_is_configured Y N -o !chip_life_is_over Y N.
+  : chip Y * chip_is_configured Y -o !chip_life_is_over Y.
 
 }
 #interactive LCM.
-%Stage section END%
 
 %context definition%
 stmicro : actor.
 clientA : actor.
 clientB : actor.
 
+manufacturer_is stmicro. 
+
 context init =
 {
   entity stmicro, 
-  manufacturer_is stmicro, 
   entity clientA,
   entity clientB,
  
@@ -76,3 +77,4 @@ context init =
 
 #trace _ LCM init.
 
+% améliorer les états, aller plus loin dans modélisation pour le moment rester vague sur les actions de l'appareil, ajouter la location pour gérer les interactions physiques avec le composant)%
