@@ -1,0 +1,149 @@
+
+% TODO: améliorer les états, aller plus loin dans modélisation pour le moment rester vague sur les actions de l'appareil, ajouter la location pour gérer les interactions physiques avec le composant)%
+
+%Nat definition%
+nat : type.
+z : nat.
+s nat : nat.
+
+#builtin NAT nat.
+#builtin NAT_ZERO z.
+#builtin NAT_SUCC s.
+
+
+% Definition related to actors %
+actor : type.
+
+manufacturer_is actor : bwd.
+%company_is actor : bwd.
+%customer_is actor : bwd.
+
+entity actor : pred.
+
+% Definition related to ICs %
+ic : type.
+stm32f4 nat : ic.
+
+ic_produced nat : pred.
+
+inc_ic nat nat: bwd.
+inc_ic N (s N).
+
+chip ic: pred.
+
+%% Chip life cycle states
+chip_is_unconfigured ic: pred.
+chip_is_configured ic: pred.
+chip_life_is_over ic: pred.
+
+% definition related to ICs physical location %
+location : type.
+location_of actor : location.
+
+ic_is_at ic location : pred. 
+
+
+% Definition Related to owning system %
+own actor ic: pred.
+
+
+%definition of stages selector
+menu_screen : pred.
+lcm_screen : pred.
+physicalWorld_screen : pred.
+quit_screen : pred.
+
+
+%Stage section%
+
+stage menu = {
+  menu/physical_action : menu_screen -o physicalWorld_screen.
+  menu/lcm : menu_screen -o lcm_screen.
+  menu/quit : menu_screen -o quit_screen.
+  
+}
+#interactive menu.
+
+qui * stage menu * $lcm_screen -o stage lcm.
+qui * stage menu * $physicalWorld_screen -o stage worldAction.
+qui * stage menu * quit_screen -o ().
+
+
+stage lcm = {
+
+lifeCycle/give_ownership
+  : $lcm_screen * 
+  $chip Y * own X Y * $entity X * $entity X' -o own X' Y.
+  
+lifeCycle/chip_configure
+  : $lcm_screen * 
+  $entity X * $chip Y * $own X Y * $ic_is_at Y (location_of X) * chip_is_unconfigured Y
+  -o
+  chip_is_configured Y.
+  
+lifeCycle/chip_reconfigure
+  : $lcm_screen * 
+  $entity X * $chip Y * $own X Y * $ic_is_at Y (location_of X) * chip_is_configured Y
+  -o
+  chip_is_configured Y.
+  
+lifeCycle/chip_end_of_life
+  : $lcm_screen * 
+  $entity X * $chip Y * $ic_is_at Y (location_of X) * own X Y * chip_is_configured Y
+  -o
+  !chip_life_is_over Y.
+
+lifeCycle/go_physical : lcm_screen -o ().
+
+}
+#interactive lcm.
+
+qui * stage lcm -o stage worldAction * physicalWorld_screen.
+
+stage worldAction = {
+
+physicalWorld/create_IC
+  : $physicalWorld_screen *
+  $entity X * manufacturer_is X * ic_produced N * inc_ic N P
+  -o
+  chip (stm32f4 P) * chip_is_unconfigured (stm32f4 P) *
+  own X (stm32f4 P) * ic_produced P *
+  ic_is_at (stm32f4 P) (location_of X).
+  
+  physicalWorld/send_component
+  : $physicalWorld_screen *
+  $entity X * $entity X' * $chip Y * ic_is_at Y (location_of X)
+  -o
+  ic_is_at Y (location_of X').
+
+  physicalWorld/dump_component
+  : $physicalWorld_screen *
+  $entity X * chip Y * ic_is_at Y (location_of X)
+  -o
+  (). 
+
+  physicalWorld/go_lcm : physicalWorld_screen -o ().
+}
+#interactive worldAction.
+
+qui * stage worldAction -o stage lcm * lcm_screen.
+
+%context definition%
+stmicro : actor.
+alice : actor.
+bob : actor.
+
+manufacturer_is stmicro. 
+
+context init =
+{
+  entity stmicro, 
+  entity alice,
+  entity bob,
+ 
+  ic_produced 0,
+
+  menu_screen
+}
+
+#trace _ menu init.
