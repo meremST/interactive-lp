@@ -12,10 +12,12 @@ s nat : nat.
 actor : type.
 
 manufacturer_is actor : bwd.
+%company_is actor : bwd.
+%customer_is actor : bwd.
 
 entity actor : pred.
 
-
+% Definition related to ICs %
 ic : type.
 stm32f4 nat : ic.
 
@@ -23,7 +25,6 @@ ic_produced nat : pred.
 
 inc_ic nat nat: bwd.
 inc_ic N (s N).
-
 
 chip ic: pred.
 
@@ -33,30 +34,57 @@ chip_is_unconfigured ic: pred.
 chip_is_configured ic: pred.
 chip_life_is_over ic: pred.
 
+% definition related to ICs physical location %
+location : type.
+location_of actor : location.
 
+ic_is_at ic location : pred. 
+
+
+% Definition Related to owning system %
 own actor ic: pred.
 
 
 %Stage section%
-stage LCM = {
+stage lcm = {
 
-lifeCycle/create_IC
-  : $entity X * manufacturer_is X * ic_produced N * inc_ic N P -o chip (stm32f4 P) * chip_is_unconfigured (stm32f4 P) * own X (stm32f4 P) * ic_produced P.
-  
-lifeCycle/give_ownership
+ifeCycle/give_ownership
   : $chip Y * own X Y * $entity X * $entity X' -o own X' Y.
   
 lifeCycle/chip_configure
-  : $entity X * $chip Y * $own X Y * chip_is_unconfigured Y -o chip_is_configured Y.
+  : $entity X * $chip Y * $own X Y * $ic_is_at Y (location_of X) * chip_is_unconfigured Y
+  -o
+  chip_is_configured Y.
   
 lifeCycle/chip_reconfigure
-  : $entity X * $chip Y * $own X Y * chip_is_configured Y -o chip_is_configured Y.
+  : $entity X * $chip Y * $own X Y * $ic_is_at Y (location_of X) * chip_is_configured Y
+  -o
+  chip_is_configured Y.
   
 lifeCycle/chip_end_of_life
-  : chip Y * chip_is_configured Y -o !chip_life_is_over Y.
+  : $entity X * $chip Y * $ic_is_at Y (location_of X) * own X Y * chip_is_configured Y
+  -o
+  !chip_life_is_over Y.
+
+  physicalWorld/create_IC
+  : $entity X * manufacturer_is X * ic_produced N * inc_ic N P
+  -o
+  chip (stm32f4 P) * chip_is_unconfigured (stm32f4 P) *
+  own X (stm32f4 P) * ic_produced P *
+  ic_is_at (stm32f4 P) (location_of X).
+  
+  physicalWorld/send_component
+  : $entity X * $entity X' * $chip Y * ic_is_at Y (location_of X)
+  -o
+  ic_is_at Y (location_of X').
+
+  physicalWorld/dump_component
+  : $entity X * chip Y * ic_is_at Y (location_of X)
+  -o
+  (). 
 
 }
-#interactive LCM.
+#interactive lcm.
 
 %context definition%
 stmicro : actor.
@@ -75,6 +103,4 @@ context init =
 }
 %context definition END%
 
-#trace _ LCM init.
-
-% améliorer les états, aller plus loin dans modélisation pour le moment rester vague sur les actions de l'appareil, ajouter la location pour gérer les interactions physiques avec le composant)%
+#trace _ lcm init.
