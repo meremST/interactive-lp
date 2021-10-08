@@ -76,22 +76,25 @@ lifeCycle/give_ownership
   $chip Y * own X Y * $entity X * $entity X' -o own X' Y.
   
 lifeCycle/chip_configure
-  : $lcm_screen * 
-  $entity X * $chip Y * $own X Y * $ic_is_at Y (location_of X) * chip_is_unconfigured Y
-  -o
-  chip_is_configured Y.
+  : $lcm_screen 
+   * $entity X * $chip Y * $own X Y
+   * $ic_is_at Y (location_of X)
+   * chip_is_unconfigured Y
+  -o chip_is_configured Y.
   
 lifeCycle/chip_reconfigure
-  : $lcm_screen * 
-  $entity X * $chip Y * $own X Y * $ic_is_at Y (location_of X) * chip_is_configured Y
-  -o
-  chip_is_configured Y.
+  : $lcm_screen
+   * $entity X * $chip Y * $own X Y
+   * $ic_is_at Y (location_of X)
+   * chip_is_configured Y
+  -o chip_is_configured Y.
   
 lifeCycle/chip_end_of_life
-  : $lcm_screen * 
-  $entity X * $chip Y * $ic_is_at Y (location_of X) * own X Y * chip_is_configured Y
-  -o
-  !chip_life_is_over Y.
+  : $lcm_screen 
+   * $entity X * $chip Y * own X Y
+   * $ic_is_at Y (location_of X)
+   * chip_is_configured Y
+  -o !chip_life_is_over Y.
 
 lifeCycle/go_physical : lcm_screen -o ().
 
@@ -103,24 +106,22 @@ qui * stage lcm -o stage worldAction * physicalWorld_screen.
 stage worldAction = {
 
 physicalWorld/create_IC
-  : $physicalWorld_screen *
-  $entity X * manufacturer_is X * ic_produced N * inc_ic N P
-  -o
-  chip (stm32f4 P) * chip_is_unconfigured (stm32f4 P) *
-  own X (stm32f4 P) * ic_produced P *
-  ic_is_at (stm32f4 P) (location_of X).
+  : $physicalWorld_screen
+   * $entity X * manufacturer_is X
+   * ic_produced N * inc_ic N P
+  -o chip (stm32f4 P) * chip_is_unconfigured (stm32f4 P)
+    * own X (stm32f4 P) * ic_produced P
+    * ic_is_at (stm32f4 P) (location_of X).
   
   physicalWorld/send_component
-  : $physicalWorld_screen *
-  $entity X * $entity X' * $chip Y * ic_is_at Y (location_of X)
-  -o
-  ic_is_at Y (location_of X').
+  : $physicalWorld_screen
+   * $entity X * $entity X' * $chip Y * ic_is_at Y (location_of X)
+  -o ic_is_at Y (location_of X').
 
   physicalWorld/dump_component
-  : $physicalWorld_screen *
-  $entity X * chip Y * ic_is_at Y (location_of X)
-  -o
-  (). 
+  : $physicalWorld_screen
+   * $entity X * chip Y * ic_is_at Y (location_of X)
+  -o (). 
 
   physicalWorld/go_lcm : physicalWorld_screen -o ().
 }
