@@ -1,0 +1,77 @@
+bool : type.
+true : bool.
+false : bool.
+
+actor : type.
+entity actor : pred.
+
+data : type.
+null : data.
+
+key_t : type.
+public_key actor : key_t.
+secret_key actor : key_t.
+
+key key_t : data.
+
+hashed data : data.
+signed key_t data : data.
+verified data bool : data.
+
+cct data data : data.
+
+have_dat actor data : pred.
+
+stage test = {
+
+	data/concat
+	: have_dat A X
+	 * have_dat A Y
+	-o have_dat A (cct X Y).
+	
+	data/deconcat
+	: have_dat A (cct X Y)
+	-o have_dat A X * have_dat A Y.
+	
+	data/hash
+	: $have_dat A X
+	-o have_dat A (hashed X).
+	
+	data/sign
+	: $have_dat A X
+	 * have_dat A (key (secret_key K))
+	-o have_dat A (signed (secret_key K) (hashed X)).
+	
+	data/verify 
+	: have_dat A D
+	 * have_dat A (signed (secret_key K) D)
+	 * have_dat A (key(public_key K))
+	-o  have_dat A (verified D true).
+
+	data/send
+	: $have_dat A D
+	 * $entity B
+	-o have_dat B D.
+
+}
+#interactive test.
+
+message : data.
+secret_message : data.
+
+alice : actor.
+bob : actor.
+eve : actor.
+
+context init = {
+	
+	entity alice,
+	entity bob,
+
+	have_dat alice message,
+
+	have_dat bob (key (public_key alice)),
+    have_dat alice (key (secret_key alice))
+
+}
+#trace _ test init.
