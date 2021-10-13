@@ -1,0 +1,145 @@
+% TODO: CPA2, CCA2 ? %
+
+
+% modelisation types and predicats %
+actor : type.
+eavesdropper actor : actor.
+entity actor : pred.
+
+data : type.
+null : data.
+
+key_t : type.
+public_key actor : key_t.
+secret_key actor : key_t.
+shared_key : key_t.
+
+key key_t : data.
+
+hashed data : data.
+signed key_t data : data.
+verified data : data.
+sym_encrypted key_t data : data.
+
+cct data data : data.
+
+have_dat actor data : pred.
+
+% protocol verification predicats %
+simul_token : pred.
+verif_token : pred.
+
+secret_is data : pred.
+goal_is actor data : pred.
+
+data_are_compromised data : pred.
+
+stage test = {
+
+	data/concat
+	: $simul_token
+	 * have_dat A X
+	 * have_dat A Y
+	-o have_dat A (cct X Y).
+	
+	data/deconcat
+	: $simul_token
+	 * have_dat A (cct X Y)
+	-o have_dat A X * have_dat A Y.
+
+	data/sym_encrypt
+	: $simul_token
+	 * have_dat A X
+	 * $have_dat A (key K)
+	-o have_dat A (sym_encrypted K X).
+
+	data/sym_decrypt
+	: $simul_token
+	 * have_dat A (sym_encrypted K X)
+	 * have_dat A (key K)
+	-o have_dat A X.
+
+    % vulnerabilitie of one time pad %
+	vuln/sym_vuln
+	: $simul_token
+	 * have_dat A (sym_encrypted K X)
+	 * have_dat A (sym_encrypted K X')
+	-o have_dat A X * have_dat A X'.
+	
+	data/hash
+	: $simul_token
+	 * $have_dat A X
+	-o have_dat A (hashed X).
+	
+	data/sign
+	: $simul_token
+	 * $have_dat A X
+	 * have_dat A (key (secret_key K))
+	-o have_dat A (signed (secret_key K) (hashed X)).
+	
+	data/verify 
+	: have_dat A D
+	 * have_dat A (signed (secret_key K) D)
+	 * have_dat A (key(public_key K))
+	-o  have_dat A (verified D).
+
+	data/send
+	: $simul_token
+	 * $entity A
+	 * $have_dat A D
+	 * $entity B
+	-o have_dat B D.
+
+	data/send_intercepted
+	: $simul_token
+	 * $entity A
+	 * $have_dat A D
+	 * $entity B
+	 * $entity (eavesdropper E)
+	-o have_dat B D * have_dat (eavesdropper E) D.
+
+	model/check_simul : simul_token -o (). 
+
+}
+#interactive test.
+
+go/verif : qui * stage test -o stage verification * verif_token.
+
+stage verification = {
+	rule1 : verif_token * $have_dat (eavesdropper E) D * secret_is D -o !data_are_compromised D.
+
+	goal : verif_token * $goal_is B M * $have_dat B M -o ().
+}
+%%#interactive verification.
+
+go/simu : qui * stage verification * verif_token -o stage test * simul_token.
+go/resolution : qui * stage verification * $data_are_compromised D -o ().
+
+message : data.
+
+alice : actor.
+bob : actor.
+eve : actor.
+
+context init = {
+	
+	simul_token,
+
+	entity alice,
+	entity bob,
+	entity (eavesdropper eve),
+
+
+	have_dat alice message,
+
+	%%have_dat bob (key (public_key alice)),
+    %%have_dat alice (key (secret_key alice)),
+    have_dat alice (key shared_key),
+
+    secret_is (key shared_key),
+    secret_is message,
+
+    goal_is bob message
+
+}
+#trace _ test init.
